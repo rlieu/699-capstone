@@ -1,18 +1,20 @@
 import praw
 import json
 import pandas as pd
+from time import sleep
 
 reddit = praw.Reddit(
     client_id="jOk3mZmCBzb_VEdk-EA8ag",
     client_secret="QtoVwxP-aTBPqydl35y7kt6D-ahMOA",
     user_agent="web:app.web.checkin-9add1:v1",
+    ratelimit_seconds=300
 )
 
 def writeOutput(fileName, data):
     outputFile = open(fileName, "w")
     outputFile.write(json.dumps(data, sort_keys = True))
 
-def prawSubreddit(subName, limit=100):
+def prawSubreddit(subName, limit=None):
     print("Collecting from /r/{}...".format(subName))
     subreddit = reddit.subreddit(subName)
     submissions = subreddit.hot(limit=limit)
@@ -26,7 +28,7 @@ def prawSubreddit(subName, limit=100):
     print("Finished Collecting.")
     writeOutput("{}.json".format(subName),redditData)
 
-# prawSubreddit("jobs")
+# prawSubreddit("jobs", limit=100)
 
 def load_posts(name):
     return pd.read_json('{}.json'.format(name))
