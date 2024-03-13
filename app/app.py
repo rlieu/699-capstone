@@ -1,4 +1,9 @@
+import sys
+import os
+sys.path.append(os.path.relpath("./api"))
+
 from flask import Flask, render_template, request
+from reddit import praw_subreddit
 import pickle 
 
 app = Flask(__name__)
@@ -18,6 +23,16 @@ def predict():
         # prediction = model.predict(input_cols)
         # output = round(prediction[0], 2)
         # return render_template("index.html", prediction_text='Your predicted annual Healthcare Expense is $ {}'.format(output))
-    
+
+@app.route("/save-posts", methods=['GET'])
+def save_posts():
+        data = request.args
+        print(data)
+
+        if not data.get('subreddit'):
+             raise Exception("No subreddit name provided")
+
+        return praw_subreddit(data.get('subreddit'))
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(port=8000, debug=True)
