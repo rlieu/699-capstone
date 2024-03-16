@@ -28,8 +28,10 @@ def write_output(fileName, data):
     outputFile.write(json.dumps(data, sort_keys = True))
 
 def get_submission_data(submission):
-    keys = ['title', 'text', 'author', 'author_flair_text', 'clicked', 'created_utc', 'distinguished', 'edited', 'id', 'is_original_content', 'is_self', 'locked', 'name', 'num_comments', 'over_18', 'permalink', 'saved', 'score', 'spoiler', 'stickied', 'upvote_ratio', 'url']
-    func = [submission.title, submission.selftext, str(submission.author), submission.author_flair_text, submission.clicked, submission.created_utc, submission.distinguished, submission.edited, submission.id, submission.is_original_content, submission.is_self, submission.locked, submission.name, submission.num_comments, submission.over_18, submission.permalink, submission.saved, submission.score, submission.spoiler, submission.stickied, submission.upvote_ratio, submission.url]
+    # keys = ['title', 'text', 'author', 'author_flair_text', 'clicked', 'created_utc', 'distinguished', 'edited', 'id', 'is_original_content', 'is_self', 'locked', 'name', 'num_comments', 'over_18', 'permalink', 'saved', 'score', 'spoiler', 'stickied', 'upvote_ratio', 'url']
+    # func = [submission.title, submission.selftext, str(submission.author), submission.author_flair_text, submission.clicked, submission.created_utc, submission.distinguished, submission.edited, submission.id, submission.is_original_content, submission.is_self, submission.locked, submission.name, submission.num_comments, submission.over_18, submission.permalink, submission.saved, submission.score, submission.spoiler, submission.stickied, submission.upvote_ratio, submission.url]
+    keys = ['post_id', 'title', 'text', 'author', 'created_utc', 'num_comments', 'url', 'score', 'upvote_ratio']
+    func = [submission.id, submission.title, json.dumps(submission.selftext), str(submission.author), submission.created_utc, submission.num_comments, submission.url, submission.score, submission.upvote_ratio]
     
     return dict(zip(keys,func))
 
@@ -85,11 +87,16 @@ def praw_subreddit_random(name, num_posts=100):
     return reddit_data
 
 def praw_subreddit_stream(name="jobs"):
+    collected_ids = {post[0]:post[1] for post in get_saved_posts("jobs")}
+    print(collected_ids)
     print("Collecting from /r/{}...".format(name))
+
     subreddit = reddit.subreddit(name)
     for submission in subreddit.stream.submissions():
-        print(submission)
-        execute_create("jobs", get_submission_data(submission))
+        print(vars(submission))
+        if submission.id not in collected_ids:
+            execute_create("jobs", get_submission_data(submission))
+            collected_ids[submission.id] = submission.title
 
 def load_posts(name):
     return pd.read_json('./{}.json'.format(name))
@@ -97,7 +104,7 @@ def load_posts(name):
 def get_connection():
     return connect(
         host=os.environ.get("DB_HOST"),
-        database="database-1",
+        database="reddit",
         user=os.environ.get("DB_USER"),
         password=os.environ.get("DB_PASS"),
         port="5432"
@@ -106,13 +113,26 @@ def get_connection():
 def execute_create(table, data):
     conn = get_connection()
 
-    data = [dict(sorted(x.items())) for x in data]
-    columns = data[0].keys()
+    columns = data.keys()
     print(columns)
+    print(len(columns))
     
-    query = "INSERT INTO {} ({}) VALUES %s RETURNING id".format(table, ','.join(columns))
-    values = [[str(value) if value else None for value in item.values()] for item in data]
+    # query = "INSERT INTO {} ({}) VALUES %s RETURNING id".format(table, ','.join(columns))
+    query = "INSERT INTO jobs (post_id,title,text,author,created_utc,num_comments,url,score,upvote_ratio) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id"
+    values = [item for item in data.values()]
     print(values)
+    print(len(values))
 
-    execute_values(conn.cursor(), query, values, fetch=True)
+    conn.cursor().execute(query, values)
+    # execute_values(conn.cursor(), query, values, fetch=True)
     conn.commit()
+
+def get_saved_posts(table="jobs"):
+    cur = get_connection().cursor()
+    
+    query = "SELECT post_id,title FROM {}".format(table)
+    cur.execute(query)
+    saved_posts = [post for post in cur.fetchall()]
+
+    return saved_posts
+    
