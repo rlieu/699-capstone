@@ -21,6 +21,6 @@ python3
 ```
 # ssh into AWS EC2 instance and activate virtual env
 . .venv/bin/activate
-cd app/
+cd api/
 gunicorn -b 0.0.0.0:8000 'reddit:praw_subreddit_stream()'
 ```
