@@ -207,6 +207,14 @@ def get_saved_posts(table="jobs"):
     saved_posts = [post for post in cur.fetchall()]
 
     return saved_posts
+
+def get_saved_posts_df(table="jobs"):
+    conn = get_connection()
+    query = "SELECT post_id,title,text,author,created_utc,num_comments,url,score,upvote_ratio,subreddit FROM {}".format(table)
+    posts_df = pd.read_sql(query, conn)
+
+    return posts_df
     
 def get_collected_ids(name="jobs"):
     return {post[0]:post[1] for post in get_saved_posts(name)}
+
