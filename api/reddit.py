@@ -31,9 +31,12 @@ def write_output(fileName, data):
 def get_submission_data_praw(submission, name=None):
     # keys = ['title', 'text', 'author', 'author_flair_text', 'clicked', 'created_utc', 'distinguished', 'edited', 'id', 'is_original_content', 'is_self', 'locked', 'name', 'num_comments', 'over_18', 'permalink', 'saved', 'score', 'spoiler', 'stickied', 'upvote_ratio', 'url']
     # func = [submission.title, submission.selftext, str(submission.author), submission.author_flair_text, submission.clicked, submission.created_utc, submission.distinguished, submission.edited, submission.id, submission.is_original_content, submission.is_self, submission.locked, submission.name, submission.num_comments, submission.over_18, submission.permalink, submission.saved, submission.score, submission.spoiler, submission.stickied, submission.upvote_ratio, submission.url]
-    keys = ['post_id', 'title', 'text', 'author', 'created_utc', 'num_comments', 'url', 'score', 'upvote_ratio', 'subreddit']
-    func = [submission.id, submission.title, json.dumps(submission.selftext), str(submission.author), submission.created_utc, submission.num_comments, submission.url, submission.score, submission.upvote_ratio, name]
-    
+    keys = ['post_id', 'title', 'text', 'author', 'created_utc', 'num_comments', 'url', 'score', 'upvote_ratio', 'subreddit', 'link_flair_template_id', 'link_flair_text']
+    try:
+        func = [submission.id, submission.title, json.dumps(submission.selftext), str(submission.author), submission.created_utc, submission.num_comments, submission.url, submission.score, submission.upvote_ratio, name, submission.link_flair_template_id, submission.link_flair_text]
+    except:
+        func = [submission.id, submission.title, json.dumps(submission.selftext), str(submission.author), submission.created_utc, submission.num_comments, submission.url, submission.score, submission.upvote_ratio, name, None, None]
+
     return dict(zip(keys,func))
 
 def save_posts(file_name, data):
@@ -87,23 +90,36 @@ def praw_subreddit_stream(name="jobs"):
 def praw_subreddit_hot(names, limit=None):
     collected_ids = get_collected_ids()
     for name in names:
-        print("Collecting from /r/{}...".format(name))
-        subreddit = reddit.subreddit(name)
-        submissions = subreddit.hot(limit=limit)
-        reddit_data = []
+        try:
+            print("Collecting from /r/{}...".format(name))
+            subreddit = reddit.subreddit(name)
+            submissions = subreddit.hot(limit=limit)
+            reddit_data = []
 
-        conn = get_connection()
-        for submission in submissions:
-            print(vars(submission))
-            data = get_submission_data_praw(submission)
-            reddit_data.append(data)
-            create_transaction(conn, "jobs", data)
-            collected_ids[submission.id] = submission.title
-
-        file_name = "{}_hot_{}.json".format(name, len(reddit_data))
-        save_posts(file_name, reddit_data)
-        upload_to_s3(file_name)
-        conn.commit()
+            conn = get_connection()
+            for submission in submissions:
+                try:
+                    # print(vars(submission))
+                    data = get_submission_data_praw(submission, name)
+                    if data['post_id'] and data['post_id'] not in collected_ids:
+                        print("post_id: {}, title: {}".format(data['post_id'], data['title']))
+                        reddit_data.append(data)
+                        create_transaction(conn, "jobs", data)
+                        collected_ids[data['post_id']] = data['title']
+                except Exception as e:
+                    print(e)
+                    pass
+        except KeyboardInterrupt:
+            raise Exception("Execution stopped")
+        except Exception as e:
+            print(e)
+            pass
+        finally:
+            if len(reddit_data) > 0:
+                file_name = "{}_hot_{}.json".format(name, len(reddit_data))
+                save_posts(file_name, reddit_data)
+                upload_to_s3(file_name)
+                conn.commit()
 
     return collected_ids
 
@@ -115,7 +131,7 @@ def execute_create(table, data):
     print(len(columns))
     
     # query = "INSERT INTO {} ({}) VALUES (%s) RETURNING id".format(table, ','.join(columns))
-    query = "INSERT INTO jobs (post_id,title,text,author,created_utc,num_comments,url,score,upvote_ratio,subreddit) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id"
+    query = "INSERT INTO jobs (post_id,title,text,author,created_utc,num_comments,url,score,upvote_ratio,subreddit,link_flair_template_id,link_flair_text) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id"
     values = [item for item in data.values()]
     print(values)
     print(len(values))
@@ -130,7 +146,7 @@ def create_transaction(conn, table, data):
     print(len(columns))
     
     # query = "INSERT INTO {} ({}) VALUES (%s) RETURNING id".format(table, ','.join(columns))
-    query = "INSERT INTO jobs (post_id,title,text,author,created_utc,num_comments,url,score,upvote_ratio,subreddit) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id"
+    query = "INSERT INTO jobs (post_id,title,text,author,created_utc,num_comments,url,score,upvote_ratio,subreddit,link_flair_template_id,link_flair_text) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id"
     values = [item for item in data.values()]
     print(values)
     print(len(values))
@@ -138,8 +154,8 @@ def create_transaction(conn, table, data):
     conn.cursor().execute(query, values)
 
 def get_submission_data(submission, name="jobs"):
-    keys = ['post_id', 'title', 'text', 'author', 'created_utc', 'num_comments', 'url', 'score', 'upvote_ratio', 'subreddit']
-    func = [submission['id'], submission['title'], submission['selftext'], submission['author'], submission['created_utc'], submission['num_comments'], submission['url'], submission['score'], submission['upvote_ratio'], name]
+    keys = ['post_id', 'title', 'text', 'author', 'created_utc', 'num_comments', 'url', 'score', 'upvote_ratio', 'subreddit', 'link_flair_template_id', 'link_flair_text']
+    func = [submission['id'], submission['title'], submission['selftext'], submission['author'], submission['created_utc'], submission['num_comments'], submission['url'], submission['score'], submission['upvote_ratio'], name, submission['link_flair_template_id'], submission['link_flair_text']]
     
     return dict(zip(keys,func))
 
@@ -192,7 +208,7 @@ def create_posts(cursor, data):
     print(columns)
     print(len(columns))
     
-    query = "INSERT INTO jobs (post_id,title,text,author,created_utc,num_comments,url,score,upvote_ratio,subreddit) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id"
+    query = "INSERT INTO jobs (post_id,title,text,author,created_utc,num_comments,url,score,upvote_ratio,subreddit,link_flair_template_id,link_flair_text) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id"
     values = [item for item in data.values()]
     print(values)
     print(len(values))
@@ -202,7 +218,7 @@ def create_posts(cursor, data):
 def get_saved_posts(table="jobs"):
     cur = get_connection().cursor()
     
-    query = "SELECT post_id,title,text,author,created_utc,num_comments,url,score,upvote_ratio,subreddit FROM {}".format(table)
+    query = "SELECT post_id,title,text,author,created_utc,num_comments,url,score,upvote_ratio,subreddit,link_flair_template_id,link_flair_text FROM {}".format(table)
     cur.execute(query)
     saved_posts = [post for post in cur.fetchall()]
 
@@ -210,7 +226,7 @@ def get_saved_posts(table="jobs"):
 
 def get_saved_posts_df(table="jobs"):
     conn = get_connection()
-    query = "SELECT post_id,title,text,author,created_utc,num_comments,url,score,upvote_ratio,subreddit FROM {}".format(table)
+    query = "SELECT post_id,title,text,author,created_utc,num_comments,url,score,upvote_ratio,subreddit,link_flair_template_id,link_flair_text FROM {}".format(table)
     posts_df = pd.read_sql(query, conn)
 
     return posts_df
