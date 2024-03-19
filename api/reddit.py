@@ -45,20 +45,20 @@ def save_posts(file_name, data):
 
     return file_name
 
-def praw_subreddit_top(name, filter='all'):
-    print("Collecting from /r/{}...".format(name))
-    subreddit = reddit.subreddit(name)
-    submissions = subreddit.top(time_filter=filter)
-    reddit_data = []
+# def praw_subreddit_top(name, filter='all'):
+#     print("Collecting from /r/{}...".format(name))
+#     subreddit = reddit.subreddit(name)
+#     submissions = subreddit.top(time_filter=filter)
+#     reddit_data = []
 
-    for submission in submissions:
-        reddit_data.append(get_submission_data_praw(submission))
+#     for submission in submissions:
+#         reddit_data.append(get_submission_data_praw(submission))
 
-    file_name = "{}_top_{}.json".format(name, filter)
-    save_posts(file_name, reddit_data)
-    upload_to_s3(file_name)
+#     file_name = "{}_top_{}.json".format(name, filter)
+#     save_posts(file_name, reddit_data)
+#     upload_to_s3(file_name)
 
-    return reddit_data
+#     return reddit_data
 
 def praw_subreddit_random(name, num_posts=100):
     print("Collecting from /r/{}...".format(name))
@@ -87,28 +87,41 @@ def praw_subreddit_stream(name="jobs"):
             execute_create("jobs", get_submission_data_praw(submission))
             collected_ids[submission.id] = submission.title
 
+def get_submission_data(submissions, conn, name, collected_ids=[]):
+    reddit_data = []
+
+    for submission in submissions:
+        try:
+            # print(vars(submission))
+            data = get_submission_data_praw(submission, name)
+            if data['post_id'] and data['post_id'] not in collected_ids:
+                print("post_id: {}, title: {}".format(data['post_id'], data['title']))
+                reddit_data.append(data)
+                create_transaction(conn, name, data)
+                collected_ids[data['post_id']] = data['title']
+        except Exception as e:
+            print(e)
+            pass
+
+    return reddit_data, collected_ids
+
+def save_data(file_name, reddit_data, conn):
+    save_posts(file_name, reddit_data)
+    upload_to_s3(file_name)
+    conn.commit()
+
+    return file_name
+
 def praw_subreddit_hot(names, limit=None):
     collected_ids = get_collected_ids()
     for name in names:
+        reddit_data = []
         try:
+            conn = get_connection()
             print("Collecting from /r/{}...".format(name))
             subreddit = reddit.subreddit(name)
             submissions = subreddit.hot(limit=limit)
-            reddit_data = []
-
-            conn = get_connection()
-            for submission in submissions:
-                try:
-                    # print(vars(submission))
-                    data = get_submission_data_praw(submission, name)
-                    if data['post_id'] and data['post_id'] not in collected_ids:
-                        print("post_id: {}, title: {}".format(data['post_id'], data['title']))
-                        reddit_data.append(data)
-                        create_transaction(conn, "jobs", data)
-                        collected_ids[data['post_id']] = data['title']
-                except Exception as e:
-                    print(e)
-                    pass
+            reddit_data, collected_ids = get_submission_data(submissions, conn, name, collected_ids=[])
         except KeyboardInterrupt:
             raise Exception("Execution stopped")
         except Exception as e:
@@ -117,9 +130,29 @@ def praw_subreddit_hot(names, limit=None):
         finally:
             if len(reddit_data) > 0:
                 file_name = "{}_hot_{}.json".format(name, len(reddit_data))
-                save_posts(file_name, reddit_data)
-                upload_to_s3(file_name)
-                conn.commit()
+                save_data(file_name, reddit_data, conn)
+
+    return collected_ids
+
+def praw_subreddit_top(names, filter='all'):
+    collected_ids = get_collected_ids()
+    for name in names:
+        reddit_data = []
+        try:
+            conn = get_connection()
+            print("Collecting from /r/{}...".format(name))
+            subreddit = reddit.subreddit(name)
+            submissions = subreddit.top(time_filter=filter)
+            reddit_data, collected_ids = get_submission_data(submissions, conn, name, collected_ids=[])
+        except KeyboardInterrupt:
+            raise Exception("Execution stopped")
+        except Exception as e:
+            print(e)
+            pass
+        finally:
+            if len(reddit_data) > 0:
+                file_name = "{}_hot_{}.json".format(name, len(reddit_data))
+                save_data(file_name, reddit_data, conn)
 
     return collected_ids
 
