@@ -115,6 +115,7 @@ def save_data(file_name, reddit_data, conn):
 def praw_subreddit_hot(names, limit=None):
     collected_ids = get_collected_ids()
     for name in names:
+        reddit_data = []
         try:
             conn = get_connection()
             print("Collecting from /r/{}...".format(name))
@@ -136,6 +137,7 @@ def praw_subreddit_hot(names, limit=None):
 def praw_subreddit_top(names, filter='all'):
     collected_ids = get_collected_ids()
     for name in names:
+        reddit_data = []
         try:
             conn = get_connection()
             print("Collecting from /r/{}...".format(name))
