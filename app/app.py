@@ -3,7 +3,7 @@ import os
 sys.path.append(os.path.relpath("./api"))
 
 from flask import Flask, render_template, request
-from reddit import praw_subreddit_hot
+from reddit import praw_subreddit_hot, get_saved_posts
 import pickle 
 
 app = Flask(__name__)
@@ -13,7 +13,7 @@ app = Flask(__name__)
 def home():
     return render_template('index.html')
 
-@app.route("/predict", methods=['GET','POST'])
+@app.route("/predict", methods=['POST'])
 def predict():
     if request.method == 'POST':
         data = request.get_data()
@@ -24,15 +24,25 @@ def predict():
         # output = round(prediction[0], 2)
         # return render_template("index.html", prediction_text='Your predicted annual Healthcare Expense is $ {}'.format(output))
 
-@app.route("/save-posts", methods=['GET'])
+@app.route("/save-posts", methods=['POST'])
 def save_posts():
-        data = request.args
+        data = request.get_data()
         print(data)
 
         if not data.get('subreddit'):
              raise Exception("No subreddit name provided")
 
         return praw_subreddit_hot(data.get('subreddit'))
+
+@app.route("/get-posts", methods=['GET'])
+def save_posts():
+        data = request.get_data()
+        print(data)
+
+        if not data.get('subreddit'):
+             raise Exception("No subreddit name provided")
+
+        return get_saved_posts(data.get('subreddit'))
 
 if __name__ == "__main__":
     app.run(port=8000, debug=True)
