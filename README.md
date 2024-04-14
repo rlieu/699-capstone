@@ -8,8 +8,8 @@ This project uses the [reddit API](https://www.reddit.com/dev/api/) to collect p
 
 ### PostgreSQL Database (RDS) 
 
-This project uses a [postgres](https://www.postgresql.org/) running on [AWS RDS](https://aws.amazon.com/rds/) to store collected post data. 
+This project uses [postgres](https://www.postgresql.org/) running on [AWS RDS](https://aws.amazon.com/rds/) to store collected post data. 
 
 ### Flask 
 
-This project is configured to use [Flask](https://flask.palletsprojects.com/en/3.0.x/) to serve collected post data through REST endpoints. 
+This project is configured to use [Flask](https://flask.palletsprojects.com/en/3.0.x/) to serve collected post data through HTTP REST endpoints. 
