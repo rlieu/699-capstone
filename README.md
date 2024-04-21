@@ -35,6 +35,21 @@ current sentiments, concerns, and discussions within the job-seeking
 community, offering a unique lens through which to examine the prevailing 
 trends and moods of the job market.
 
+## Running Jupyter Notebooks
+
+### Environment Steup (venv)
+
+Activate virtual environment from project root
+
+`source .venv/bin/activate`
+
+Install required packages
+
+`pip3 install -r requirements.txt`
+
+Files with the `.ipynb` extension can now be run using the venv kernel
+
+
 ## Resources
 
 ### Reddit API
