@@ -9,7 +9,8 @@ from dash.dependencies import Input, Output
 from flask_cors import CORS
 
 app = Dash(__name__)
-CORS(app.server)
+server = app.server
+CORS(server)
 
 df1 = pd.read_csv('../Sentiment & Engagement Datasets/ready_data_score.csv')
 
