@@ -6,8 +6,10 @@ import plotly.graph_objects as go
 # from jupyter_dash import JupyterDash
 from dash import dcc, html, Dash
 from dash.dependencies import Input, Output
+from flask_cors import CORS
 
 app = Dash(__name__)
+CORS(app.server)
 
 df1 = pd.read_csv('../Sentiment & Engagement Datasets/ready_data_score.csv')
 
