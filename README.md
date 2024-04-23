@@ -10,6 +10,8 @@
 
 ## Project Overview 
 
+View [Dashboard](http://3.134.77.155:8050/)
+
 This project examines Reddit posts from work-related communities to 
 reveal variations in sentiment and user engagement across different times 
 and discussion types. By analyzing how discussion moods shift throughout 
