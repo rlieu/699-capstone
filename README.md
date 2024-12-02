@@ -5,12 +5,11 @@
 1. [Project Overview](#project-overview) 
 2. [Data Collection](https://github.com/rlieu/699-capstone/tree/main/api#readme)
 3. [Data Preparation / Exploration](https://github.com/rlieu/699-capstone/blob/main/Exploring%20the%20whole%20dataset.ipynb)
-4. [Sentiment Analysis](https://github.com/rlieu/699-capstone/blob/main/Sentiment%20Analysis.ipynb)
+4. [Sentiment Analysis](https://github.com/rlieu/699-capstone/blob/main/Sentiment%20Score.ipynb)
 5. [Topic Modeling](https://github.com/rlieu/699-capstone/blob/main/Topic_Modeling/Topic_Modeling.ipynb)
+6. [Final Model](https://github.com/rlieu/699-capstone/blob/main/SupervisedLearning/Final_Supervised_model.ipynb)
 
 ## Project Overview 
-
-View [Dashboard](http://3.134.77.155:8050/)
 
 This project examines Reddit posts from work-related communities to 
 reveal variations in sentiment and user engagement across different times 
